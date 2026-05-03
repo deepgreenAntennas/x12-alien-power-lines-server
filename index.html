@@ -3,10 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>X12-Alien-Power-Lines-Server</title>
-    <link rel="stylesheet" href="quantum-effects.css">
+    <title>X12 Online: Cyberpunk MMORPG</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r170/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.170.0/examples/jsm/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/three@0.170.0/examples/jsm/postprocessing/EffectComposer.js"></script>
+    <script src="https://unpkg.com/three@0.170.0/examples/jsm/postprocessing/RenderPass.js"></script>
+    <script src="https://unpkg.com/three@0.170.0/examples/jsm/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"></script>
+    <script src="https://unpkg.com/dat.gui@0.7.9/build/dat.gui.min.js"></script>
+    <script src="https://unpkg.com/colyseus.js@0.15.23/dist/colyseus.js"></script>
     <style>
         :root {
             --primary: #00f7ff;
@@ -34,6 +41,1287 @@
         }
         
         body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(0, 247, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(255, 0, 214, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(0, 247, 255, 0.3);
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(0, 247, 255, 0.5);
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .nav-link {
+            color: var(--text);
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            padding: 5px 0;
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            color: var(--primary);
+            text-shadow: 0 0 10px var(--primary);
+        }
+        
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        
+        .user-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .btn {
+            background: rgba(0, 247, 255, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--text);
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Exo 2', sans-serif;
+            font-size: 1rem;
+        }
+        
+        .btn:hover {
+            background: rgba(0, 247, 255, 0.3);
+            box-shadow: 0 0 10px var(--primary);
+        }
+        
+        .btn-accent {
+            background: rgba(255, 0, 214, 0.1);
+            border: 1px solid var(--secondary);
+        }
+        
+        .btn-accent:hover {
+            background: rgba(255, 0, 214, 0.3);
+            box-shadow: 0 0 10px var(--secondary);
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .server-status {
+            background: rgba(10, 10, 26, 0.7);
+            border: 1px solid rgba(0, 247, 255, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .server-status::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(45deg, transparent 0%, rgba(0, 247, 255, 0.05) 50%, transparent 100%);
+            pointer-events: none;
+        }
+        
+        .status-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+        }
+        
+        .power-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .grid-node {
+            background: rgba(10, 10, 26, 极7);
+            border: 1px solid rgba(0, 247, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .grid-node:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(极, 247, 255, 0.2);
+            border-color: var(--primary);
+        }
+        
+        .grid-node::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(45deg, transparent 0%, rgba(0, 247, 255, 0.05) 50%, transparent 100%);
+            pointer-events: none;
+        }
+        
+        .node-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+        
+        .node-data {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .chat-container {
+            background: rgba(10, 10, 26, 0.7);
+            border: 1px solid rgba(0, 247, 255, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+        }
+        
+        .chat-header {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color:极(--primary);
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 247, 255, 0.3);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            margin-bottom: 15px;
+            background: rgba(5, 5, 16, 0.5);
+            border-radius: 4px;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            background: rgba(0, 247, 255, 0.05);
+            border-left: 2px solid var(--primary);
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+极.message-user {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .message-time {
+            color: var(--text-dim);
+        }
+        
+        .message-content {
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            background: rgba(5, 5, 16, 0.5);
+            border: 1px solid rgba(0, 247, 255, 0.3);
+            border-radius: 4px;
+            padding: 10px 15px;
+            color: var(--text);
+            font-family: 'Exo 2', sans-serif;
+        }
+        
+        .chat-input input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 5px var(--primary);
+        }
+        
+        .forum-section {
+            margin-top: 30px;
+        }
+        
+        .forum-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .forum-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+        
+        .forum-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .forum-card {
+            background: rgba(10, 10, 26, 0.7);
+            border: 1px solid rgba(0, 247, 255, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .forum-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 247, 255, 0.2);
+            border-color: var(--primary);
+        }
+        
+        .forum-card-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+        
+        .forum-card-desc {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        .forum-card-meta {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            border-top: 1px solid rgba(0, 247, 255, 0.2);
+            padding-top: 10px;
+        }
+        
+        .power-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .line {
+            position: absolute;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            height: 2px;
+            transform-origin: 0 50%;
+            box-shadow: 0 0 10px var(--primary);
+        }
+        
+        .node {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 15px var(--primary);
+            transform: translate(-50%, -50%);
+        }
+        
+        .alien-ship {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, var(--secondary), transparent 70%);
+            border-radius: 50%;
+            box-shadow: 0 0 30极 var(--secondary);
+            animation: pulse 3s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.2); }
+        }
+        
+        .exoplanet {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--accent), transparent 70%);
+            box-shadow: 0 0 20px var(--accent);
+            animation: rotate 20s infinite linear;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg) translateX(40px) rotate(0deg); }
+            100% { transform: rotate(360deg) translateX(40px) rotate(-360deg); }
+        }
+        
+        footer {
+            margin-top: 50px;
+            padding: 20px 0;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(0, 247, 255, 0.3);
+        }
+        
+        /* Authentication modals */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(5, 5, 16, 0.8);
+        }
+        
+        .modal-content {
+            background: linear-gradient(125deg, var(--darker) 0%, var(--dark) 100%);
+            margin: 5% auto;
+            padding: 25px;
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 247, 255, 0.3);
+        }
+        
+        .close-modal {
+            color: var(--text-dim);
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        
+        .close-modal:hover {
+            color: var(--primary);
+        }
+        
+        .auth-form {
+            margin-top: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(5, 5, 16, 0.5);
+            border: 1px solid rgba(0, 247, 255, 0.3);
+            border-radius: 4px;
+            color: var(--text);
+            font-family: 'Exo 2', sans-serif;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 5px var(--primary);
+        }
+        
+        .auth-submit {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 4px;
+            color: var(--dark);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .auth-sub极:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 247, 255, 0.3);
+        }
+        
+        .auth-status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .success {
+            color: var(--accent);
+        }
+        
+        .error {
+            color: #ff0057;
+        }
+        
+        .quantum-badge {
+            background: rgba(0, 247, 255, 0.1);
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-left: 10px;
+            font-size: 0.8rem;
+        }
+        
+        #dashboardLink {
+            display: none;
+        }
+        
+        /* Quantum Effects Styles */
+        @keyframes quantum-pulse {
+            0% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 0.7; transform: scale(1); }
+        }
+        
+        @keyframes quantum-glow {
+            0% { box-shadow: 0 0 5px var(--primary), 0 0 10px var(--primary); }
+            50% { box-shadow: 0 0 15px var(--primary), 0 0 20px var(--primary); }
+            100% { box-shadow: 0 0 5px var(--primary), 0 0 10px var(--primary); }
+        }
+        
+        @keyframes quantum-oscillation {
+            0% { transform: translateY(0); }
+            25% { transform: translateY(-2px); }
+            50% { transform: translateY(0); }
+            75% { transform: translateY(2px); }
+            极0% { transform: translateY(0); }
+        }
+        
+        .quantum-message {
+            border-left: 3px solid var(--primary) !important;
+            background: rgba(0, 247, 255, 0.05) !important;
+            animation: quantum-pulse 3s infinite;
+        }
+        
+        .quantum-indicator {
+            margin-left: 10px;
+            font-size: 0.9em;
+        }
+        
+        .quantum-status {
+            font-size: 0.8em;
+            color: var(--primary);
+            font-style: italic;
+        }
+        
+        .quantum-vote {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0, 247, 255, 0.2);
+        }
+        
+        .quantum-upvote, .quantum-downvote {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--text);
+            padding: 5px 10px;
+            border-radius: 3极;
+            cursor: pointer;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+            animation: quantum-glow 2s infinite;
+        }
+        
+        .quantum-upvote:hover, .quantum-downvote:hover {
+            background: rgba(0, 247, 255, 0.1);
+        }
+        
+        .vote-count {
+            margin: 0 10px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .quantum-recommendations {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0, 247, 255, 0.05);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+        }
+        
+        .recommendations-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+        
+        .quantum-recommendation {
+            padding: 10px;
+            margin: 10px 0;
+            background: rgba(0, 247, 255, 0.1);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: quantum-oscillation 4s infinite;
+        }
+        
+        .quantum-recommendation:hover {
+            background: rgba(0, 247, 255, 0.2);
+            transform: translateX(5px);
+        }
+        
+        .quantum-security {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 247, 255, 0.05);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+        }
+        
+        .security-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+        
+        .quantum-security p {
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .status-online {
+            color: var(--accent);
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        
+        .entangled-count {
+            color: var(--primary);
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        
+        .quantum-particle {
+            position: fixed;
+            width: 3px;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            animation: quantum-trail 1s forwards;
+        }
+        
+        @keyframes quantum-trail {
+            0% { opacity: 1; transform: translate(0, 0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+        }
+        
+        @media (max-width: 992px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .power-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .user-controls {
+                justify-content: center;
+            }
+            
+            .quantum-vote {
+                justify-content: center;
+            }
+            
+            .quantum-recommendations {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="power-line" id="powerLine"></div>
+    
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Quantum Login</h2>
+            <form id="loginForm" class="auth-form">
+                <div class极form-group">
+                    <label for="loginUsername">Username</label>
+                    <input type="text" id="loginUsername" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="auth-submit">Login with Quantum Auth</button>
+                <div id="loginStatus" class="auth-status"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Quantum Registration</h2>
+            <form id="register极orm" class="auth-form">
+                <div class="form-group">
+                    <label for="registerUsername">Username</label>
+                    <input type="text" id="registerUsername" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerConfirmPassword">Confirm Password</label>
+                    <input type="password" id="registerConfirmPassword" required>
+                </div>
+                <button type="submit" class="auth-submit">Register with Quantum Security</button>
+                <div id="registerStatus" class="auth-status"></div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="container">
+        <header>
+            <div class="logo">X12-Alien-Power-Lines</div>
+            <div class="nav-links">
+                <a href="#status" class="nav-link">Server Status</a>
+                <a href="#power-grid" class="nav-link">Power Grid</a>
+                <a href="#chat" class="nav-link">Multi-User Chat</a>
+                <a href="#forum" class="nav-link">Message Board</a>
+                <a href="#nodes" class="nav-link">Connected Nodes</a>
+            </div>
+            <div class="user-controls">
+                <div id="userInfo" style="display: none;"></div>
+                <button id="loginBtn" class="btn">Login</button>
+                <button id="registerBtn" class="btn btn-accent">Register</button>
+                <button id="logoutBtn" class="btn btn-accent" style="display: none;">Logout</button>
+                <a href="quantum-dashboard.html" id="dashboardLink" class="btn">Dashboard</a>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <div>
+                <section id="status" class="server-status">
+                    <h2 class="status-title"><span class="status-indicator"></span>Server Status: Online</h2>
+                    <div class="node-data">
+                        <p>X12 Server is operating at 98.7% capacity. All systems nominal.</p>
+                        <p>Connected to 17 exoplanets and 8 alien spacecraft via quantum power lines.</p>
+                        <p>Last system update: 23.47.82 X12 Standard Time</p>
+                    </div>
+                    <div class="quantum-security">
+                        <h3 class="security-title">Quantum Security Status</h3>
+                        <p>🔒 Quantum Key Distribution: <span class="status-online">Active</span></p>
+                        <p>⚛️ Entangled Connections: <span class="entangled-count">0</span></p>
+                        <button class="btn" id="initiateQKD">Initiate QKD Protocol</button>
+                    </div>
+                </section>
+                
+                <section id="power-grid" class="power-grid">
+                    <div class="grid-node">
+                        <h3 class="node-title">Alpha Centauri Bb</h3>
+                        <div class="node-data">
+                            <p>Distance: 4.37 light years</p>
+                            <p>Power Output: 12.7 TW</p>
+                            <p>Status: Stable</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-node">
+                        <h3 class="node-title">Trappist-1e</h3>
+                        <div class="node-data">
+                            <p>Distance: 39.6 light years</p>
+                            <p>Power Output: 8.4 TW</p>
+                            <p极Status: Stable</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-node">
+                        <h3 class="node-title">KIC 8462852</h3>
+                        <div class="node-data">
+                            <p>Distance: 1,480 light years</p>
+                            <p>Power Output: 23.1 TW</极>
+                            <p>Status: Fluctuating</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-node">
+                        <h3 class="node-title">ZV-47 Alien Craft</h3>
+                        <div class="node-data">
+                            <p>Distance: 0.00034 light years</p>
+                            <p>Power Draw: 5.3 TW</p>
+                            <p>Status: Charging</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="forum" class="forum-section">
+                    <div class="forum-header">
+                        <h2 class="forum-title">Message Board</h2>
+                        <button class="btn">New Topic</button>
+                    </div>
+                    
+                    <div class="forum-grid">
+                        <div class="forum-card">
+                            <h3 class="forum-card-title">Power Line Optimization</h3>
+                            <p class="forum-card-desc">Discuss methods to improve efficiency of quantum power transmission across interstellar distances.</p>
+                            <div class="quantum-vote">
+                                <button class="quantum-upvote" title="Quantum upvote">⚛️↑</button>
+                                <span class="vote-count">0</span>
+                                <button class="quantum-downvote" title="Quantum downvote">⚛️↓</button>
+                            </div>
+                            <div class="forum-card-meta">
+                                <span>24 replies</span>
+                                <span>Last post: 2 hours ago</span>
+                            </div>
+                        </div>
+                        
+                        <div class="forum-card">
+                            <h3 class="forum-card-title">Alien Communication Protocols</h3>
+                            <p class="forum-card-desc">Share experiences and best practices for communicating with extraterrestrial civilizations.</p>
+                            <div class="quantum-vote">
+                                <button class="quantum-upvote" title="Quantum upvote">⚛️↑</button>
+                                <span class="vote-count">0</span>
+                                <button class="quantum-downvote" title="Quantum downvote">⚛️↓</button>
+                            </div>
+                            <div class="forum-card-meta">
+                                <span>57 replies</span>
+                                <span>Last post: 5 hours ago</span>
+                            </div>
+                        </div>
+                        
+                        <div class="forum-card">
+                            <h3 class="forum-card-title">Exoplanet Resource Management</h3>
+                            <p class="forum-card-desc">Strategies for sustainable harvesting of exotic materials from connected exoplanets.</p>
+                            <div class="quantum-vote">
+                                <button class="quantum-upvote" title="Quantum upvote">⚛️↑</button>
+                                <span class="vote-count">0</span>
+                                <button class="quantum-downvote" title="Quantum downvote">⚛️↓</button>
+                            </div>
+                            <div class="forum-card-meta">
+                                <span>32 replies</span>
+                                <span>Last post: 1 day ago</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="quantum-recommendations">
+                        <h3 class="recommendations-title">Quantum Recommendations</h3>
+                        <div class="recommendations-list"></div>
+                    </div>
+                </section>
+            </div>
+            
+            <div>
+                <section id="chat" class="chat-container">
+                    <h2 class="chat-header">Multi-User Chat</h2>
+                    <div class="chat-messages">
+                        <div class="message">
+                            <div class="message-header">
+                                <span class="message-user">Nexus_Operator</span>
+                                <span class="message-time">23:47:12</span>
+                            </div>
+                            <p class="message-content">Welcome to the X12 server chat. All users please report your current status.</p>
+                        </div>
+                        
+                        <div class="message">
+                            <div class="message-header">
+                                <span class="message-user">Astro_Engineer</span>
+                                <span class="message-time">23:48:03</span>
+                            </div>
+                            <p class="message-content">Trappist-1e connection stable. Power output at 98% of predicted maximum.</p>
+                        </div>
+                        
+                        <div class="message">
+                            <div class="message-header">
+                                <span class="message-user">Xenolinguist</span>
+                                <span class="message-time">23:49:27</span>
+                            </div>
+                            <p class="message-content">Received new communication patterns from ZV-47 craft. Analyzing now.</p>
+                        </div>
+                        
+                        <div class="message">
+                            <div class="message-header">
+                                <span class="message-user">Quantum_Technician</span>
+                                <span class="message-time">23:51:44</span>
+                            </div>
+                            <p class="message-content">Noticing some fluctuations in the KIC 8462852 line. May need to recalibrate.</p>
+                        </div>
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" placeholder="Type your message...">
+                        <button class="btn">Send</button>
+                    </div>
+                </section>
+                
+                <section id="nodes" class="server-status" style="margin-top: 30px;">
+                    <h2 class="status-title">Connected Nodes</h2>
+                    <div class="node-data">
+                        <p>17 exoplanets currently connected</p>
+                        <p>8 alien spacecraft interfacing</p>
+                        <p>3 wormhole stabilization points</p>
+                        <p>Next maintenance window: 48.12 X12 ST</p>
+                    </div>
+                </section>
+            </div>
+        </div>
+        
+        <footer>
+            <p>X12-Alien-Power-Lines-Server © 2382 | Interstellar Network Operation Center</p>
+            <p>All transmissions are monitored for security and quality purposes.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Power line animation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create power lines and nodes
+            const powerLineContainer = document.getElementById('powerLine');
+            const numLines = 15;
+            const nodes = [];
+            
+            // Create nodes at random positions
+            for (let i = 0; i < 20; i++) {
+                const node = document.createElement('div');
+                node.classList.add('node');
+                
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                
+                node.style.left = `${x}%`;
+                node.style.top = `${y}%`;
+                
+                nodes.push({x, y, element: node});
+                powerLineContainer.appendChild(node);
+            }
+            
+            // Create alien ships
+            for (let i = 0; i < 5; i++) {
+                const ship = document.createElement('div');
+                ship.classList.add('alien-ship');
+                
+                ship.style.left = `${10 + Math.random() * 80}%`;
+                ship.style.top = `${10 + Math.random() * 80}%`;
+                
+                powerLineContainer.appendChild(ship);
+            }
+            
+            // Create exoplanets
+            for (let i = 0; i < 8; i++) {
+                const planet = document.createElement('div');
+                planet.classList.add('exoplanet');
+                
+                const orbitCenterX = 20 + Math.random() * 60;
+                const orbitCenterY = 20 + Math.random() * 60;
+                
+                planet.style.left = `${orbitCenterX}%`;
+                planet.style.top = `${orbitCenterY}%`;
+                
+                // Each planet will have a slightly different animation
+                planet.style.animationDuration = `${15 + Math.random() * 20}s`;
+                
+                power极Container.appendChild(planet);
+            }
+            
+            // Create lines between random nodes
+            for (let i = 0; i < numLines; i++) {
+                const line = document.createElement('div');
+                line.classList.add('line');
+                
+                const startNode = nodes[Math.floor(Math.random() * nodes.length)];
+                const endNode = nodes[Math.floor(Math.random() * nodes.length)];
+                
+                const dx = endNode.x - startNode.x;
+                const dy = endNode.y - startNode.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                
+                line.style.width = `${length}%`;
+                line.style.left = `${startNode.x}%`;
+                line.style.top = `${startNode.y}%`;
+                line.style.transform = `rotate(${angle}deg)`;
+                line.style.opacity = `${0.2 + Math.random() * 0.5}`;
+                
+                powerLineContainer.appendChild(line);
+            }
+            
+            // Simple chat functionality
+            const chatInput = document.querySelector('.chat-input input');
+            const chatSend = document.querySelector('.chat-input .btn');
+            const chatMessages = document.querySelector('.chat-messages');
+            
+            chatSend.addEventListener('click', function() {
+                if (chatInput.value.trim() !== '') {
+                    const now = new Date();
+                    const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                    
+                    const message = document.createElement('div');
+                    message.classList.add('message');
+                    
+                    message.innerHTML = `
+                        <div class="message-header">
+                            <span class="message-user">Guest_User</span>
+                            <span class="message-time">${time}</span>
+                        </div>
+                        <p class="message-content">${chatInput.value}</p>
+                    `;
+                    
+                    chatMessages.appendChild(message);
+                    chatInput.value = '';
+                    
+                    // Scroll to bottom
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            });
+            
+            chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    chatSend.click();
+                }
+            });
+            
+            // Smooth scrolling for navigation links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 100,
+                        behavior: 'smooth'
+                    });
+                });
+            });
+            
+            // Quantum voting system
+            const forumCards = document.querySelectorAll('.forum-card');
+            
+            forumCards.forEach(card => {
+                const upvoteBtn = card.querySelector('.quantum-upvote');
+                const downvoteBtn = card.querySelector('.quantum-downvote');
+                const voteCount = card.querySelector('.vote-count');
+                
+                upvoteBtn.addEventListener('click', function() {
+                    const currentCount = parseInt(voteCount.textContent);
+                    voteCount.textContent = currentCount + 1;
+                    this.style.animation = 'quantum-glow 0.5s';
+                    setTimeout(() => {
+                        this.style.animation = 'quantum-glow 2s infinite';
+                    }, 500);
+                });
+                
+                downvoteBtn.addEventListener('click', function() {
+                    const currentCount = parseInt(voteCount.textContent);
+                    voteCount.textContent = currentCount - 1;
+                    this.style.animation = 'quantum-glow 0.5s';
+                    setTimeout(() => {
+                        this.style.animation = 'quantum-glow 2s infinite';
+                    }, 500);
+                });
+            });
+            
+            // Simulate quantum recommendations
+            setTimeout(() => {
+                const recList = document.querySelector('.recommendations-list');
+                const recommendations = [
+                    "Quantum Entanglement Protocols",
+                    "Alien Language Decryption",
+                    "Exoplanet Energy Harvesting",
+                    "Wormhole Stabilization Techniques"
+                ];
+                
+                recommendations.forEach(rec => {
+                    const recItem = document.createElement('div');
+                    recItem.classList.add('quantum-recommendation');
+                    recItem.textContent = rec;
+                    recList.appendChild(recItem);
+                });
+            }, 1000);
+            
+            // QKD button
+            document.getElementById('initiateQKD').addEventListener('click', function() {
+                this.textContent = "Initializing QKD...";
+                this.disabled = true;
+                
+                setTimeout(() => {
+                    this.textContent = "QKD Protocol Complete";
+                    document.querySelector('.entangled-count').textContent = "4";
+                    
+                    // Create quantum particles effect
+                    for (let i = 0; i < 20; i++) {
+                        createQuantumParticle();
+                    }
+                }, 2000);
+            });
+            
+            function createQuantumParticle() {
+                const particle = document.createElement('div');
+                particle.classList.add('quantum-particle');
+                
+                const startX = Math.random() * window.innerWidth;
+                const startY = Math.random() * window.innerHeight;
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 50 + Math.random() * 100;
+                
+                particle.style.left = `${startX}px`;
+                particle.style.top = `${startY}px`;
+                
+                particle.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
+                particle.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
+                
+                document.body.appendChild(particle);
+                
+                setTimeout(() => {
+                    document.body.removeChild(particle);
+                }, 1000);
+            }
+            
+            // Auth modal functionality
+            const loginModal = document.getElementById('loginModal');
+            const registerModal = document.getElementById('registerModal');
+            const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const closeButtons = document.querySelectorAll('.close-modal');
+            
+            // Open login modal
+            if (loginBtn) {
+                loginBtn.addEventListener('click', function() {
+                    if (loginModal) loginModal.style.display = 'block';
+                });
+            }
+            
+            // Open register modal
+            if (registerBtn) {
+                registerBtn.addEventListener('click', function() {
+                    if (registerModal) registerModal.style.display = 'block';
+                });
+            }
+            
+            // Logout button
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function() {
+                    // Simulate logout
+                    document.getElementById('userInfo').style.display = 'none';
+                    document.getElementById('loginBtn').style.display = 'block';
+                    document.getElementById('registerBtn').style.display = 'block';
+                    document.getElementById('logoutBtn').style.display = 'none';
+                    document.getElementById('dashboardLink').style.display = 'none';
+                });
+            }
+            
+            // Close modals
+            closeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    if (loginModal) loginModal.style.display = 'none';
+                    if (registerModal) registerModal.style.display = 'none';
+                });
+            });
+            
+            // Close modals when clicking outside
+            window.addEventListener('click', function(event) {
+                if (loginModal && event.target === loginModal) {
+                    loginModal.style.display = 'none';
+                }
+                if (registerModal && event.target === registerModal) {
+                    registerModal.style.display = 'none';
+                }
+            });
+            
+            // Login form submission
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const username = document.getElementById('loginUsername').value;
+                    const password = document.getElementById('loginPassword').value;
+                    const loginStatus = document.getElementById('loginStatus');
+                    
+                    // Simulate login
+                    if (username && password) {
+                        loginStatus.innerHTML = `<span class="success">Quantum login successful!</span>`;
+                        
+                        setTimeout(() => {
+                            loginModal.style.display = 'none';
+                            loginStatus.innerHTML = '';
+                            loginForm.reset();
+                            
+                            // Update UI
+                            document.getElementById('userInfo').style.display = 'flex';
+                            document.getElementById('userInfo').innerHTML = `
+                                <span>Welcome, <strong>${username}</strong></span>
+                                <span class="quantum-badge">⚛️ Quantum User</span>
+                            `;
+                            document.getElementById('loginBtn').style.display = 'none';
+                            document.getElementById('registerBtn').style.display = 'none';
+                            document.getElementById('logoutBtn').style.display = 'block';
+                            document.getElementById('dashboardLink').style.display = 'block';
+                        }, 1500);
+                    } else {
+                        loginStatus.innerHTML = `<span class="error">Please enter username and password</span>`;
+                    }
+                });
+            }
+            
+            // Register form submission
+            const registerForm = document.getElementById('registerForm');
+            if (registerForm) {
+                registerForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const username = document.getElementById('registerUsername').value;
+                    const email = document.getElementById('registerEmail').value;
+                    const password = document.getElementById('registerPassword').value;
+                    const confirmPassword = document.getElementById('registerConfirmPassword').value;
+                    const registerStatus = document.getElementById('registerStatus');
+                    
+                    if (password !== confirmPassword) {
+                        registerStatus.innerHTML = `<span class="error">Passwords do not match</span>`;
+                        return;
+                    }
+                    
+                    if (username && email && password) {
+                        registerStatus.innerHTML = `<span class="success">Quantum registration successful!</span>`;
+                        
+                        setTimeout(() => {
+                            registerModal.style.display = 'none';
+                            registerStatus.innerHTML = '';
+                            registerForm.reset();
+                            
+                            // Update UI
+                            document.getElementById('userInfo').style.display = 'flex';
+                            document.getElementById('userInfo').innerHTML = `
+                                <span>Welcome, <strong>${username}</strong></span>
+                                <span class="quantum-badge">⚛️ Quantum User</span>
+                            `;
+                            document.getElementById('loginBtn').style.display = 'none';
+                            document.getElementById('registerBtn').style.display = 'none';
+                            document.getElementById('logoutBtn').style.display = 'block';
+                            document.getElementById('dashboardLink').style.display = 'block';
+                        }, 1500);
+                    } else {
+                        registerStatus.innerHTML = `<span class="error">Please fill all fields</span>`;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
             content: '';
             position: fixed;
             top: 0;
